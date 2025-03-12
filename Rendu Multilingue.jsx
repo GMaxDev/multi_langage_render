@@ -69,21 +69,15 @@ function createRenderPanel(thisObj) {
                     return;
                 }
 
-                var comp = project.activeItem;
-                if (!comp || !(comp instanceof CompItem)) {
-                    alert("❌ Sélectionne une composition !");
-                    return;
+                var selectedComps = [];
+                for (var i = 1; i <= project.numItems; i++) {
+                    if (project.item(i) instanceof CompItem && project.item(i).selected) {
+                        selectedComps.push(project.item(i));
+                    }
                 }
 
-                var sliderLayer = comp.layer("choix_langue");
-                if (!sliderLayer) {
-                    alert("❌ Calque 'choix_langue' introuvable !");
-                    return;
-                }
-
-                var slider = sliderLayer.effect("Langue")("Curseur");
-                if (!slider) {
-                    alert("❌ Effet 'Langue' introuvable !");
+                if (selectedComps.length === 0) {
+                    alert("❌ Sélectionne au moins une composition !");
                     return;
                 }
 
@@ -114,9 +108,13 @@ function createRenderPanel(thisObj) {
                     }
                 }
 
-                function renderNextLanguage(index) {
+                function renderNextLanguage(comp, index, compIndex) {
                     if (index >= languesDispos.length) {
-                        alert("✅ Tous les rendus sont terminés !");
+                        if (compIndex < selectedComps.length - 1) {
+                            renderNextLanguage(selectedComps[compIndex + 1], 0, compIndex + 1);
+                        } else {
+                            alert("✅ Tous les rendus sont terminés !");
+                        }
                         return;
                     }
 
@@ -148,6 +146,18 @@ function createRenderPanel(thisObj) {
                         }
                     }
 
+                    var sliderLayer = comp.layer("choix_langue");
+                    if (!sliderLayer) {
+                        alert("❌ Calque 'choix_langue' introuvable !");
+                        return;
+                    }
+
+                    var slider = sliderLayer.effect("Langue")("Curseur");
+                    if (!slider) {
+                        alert("❌ Effet 'Langue' introuvable !");
+                        return;
+                    }
+
                     slider.setValue(index);
 
                     var renderQueue = project.renderQueue;
@@ -164,10 +174,10 @@ function createRenderPanel(thisObj) {
                         $.sleep(500);
                     }
 
-                    renderNextLanguage(index + 1);
+                    renderNextLanguage(comp, index + 1, compIndex);
                 }
 
-                renderNextLanguage(0);
+                renderNextLanguage(selectedComps[0], 0, 0);
 
                 app.endUndoGroup();
             })();
