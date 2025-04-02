@@ -108,6 +108,38 @@ function createRenderPanel(thisObj) {
                     }
                 }
 
+                function setLayerVisibilityRecursive(comp, langue) {
+                    for (var i = 1; i <= comp.numLayers; i++) {
+                        var layer = comp.layer(i);
+                        var layerName = layer.name; // Utilise uniquement le nom du calque
+
+                        // Vérifie si le calque est une précomposition
+                        if (layer.source && layer.source instanceof CompItem) {
+                            // Appelle récursivement pour les calques de la précomposition
+                            setLayerVisibilityRecursive(layer.source, langue);
+                        }
+
+                        // Vérifie si le calque a un préfixe de langue explicite
+                        var prefixMatch = layerName.match(/^([A-Z]{2})[\s_-](?!.*[^\s_-])/);
+                        if (prefixMatch) {
+                            var layerLang = prefixMatch[1]; // Récupère "FR", "DE", etc.
+
+                            if (layerLang === langue) {
+                                layer.enabled = true;  // Active la langue sélectionnée
+                            } else {
+                                layer.enabled = false; // Désactive les autres langues
+                            }
+                        } else {
+                            // Si aucun préfixe explicite, ne modifie pas l'état du calque
+                            layer.enabled = layer.enabled;
+                        }
+                    }
+
+                    // 🔄 Force le rafraîchissement de la précomposition
+                    comp.frameRate = comp.frameRate + 0.0001;
+                    comp.frameRate = comp.frameRate - 0.0001;
+                }
+
                 function renderNextLanguage(comp, index, compIndex) {
                     if (index >= languesDispos.length) {
                         if (compIndex < selectedComps.length - 1) {
@@ -121,30 +153,6 @@ function createRenderPanel(thisObj) {
                     var langue = languesDispos[index];
                     // Active/Désactive les calques selon la langue
                     setLayerVisibilityRecursive(comp, langue);
-
-                    function setLayerVisibilityRecursive(comp, langue) {
-                        for (var i = 1; i <= comp.numLayers; i++) {
-                            var layer = comp.layer(i);
-                            var layerName = layer.name;
-                    
-                            // Si c'est une précomposition, on applique la fonction récursivement
-                            if (layer.source && layer.source instanceof CompItem) {
-                                setLayerVisibilityRecursive(layer.source, langue);
-                            }
-                    
-                            // Vérifie si le calque a un préfixe correspondant à une langue
-                            var prefixMatch = layerName.match(/^([A-Z]{2})_/);
-                            if (prefixMatch) {
-                                var layerLang = prefixMatch[1]; // Récupère le préfixe de la langue (ex: "FR", "DE")
-                    
-                                if (layerLang === langue) {
-                                    layer.enabled = true;  // Active les calques de la langue en cours
-                                } else {
-                                    layer.enabled = false; // Désactive les autres langues
-                                }
-                            }
-                        }
-                    }
 
                     var sliderLayer = comp.layer("choix_langue");
                     if (!sliderLayer) {
@@ -173,7 +181,10 @@ function createRenderPanel(thisObj) {
                     while (app.project.renderQueue.rendering) {
                         $.sleep(500);
                     }
-
+                    for (var j = 0; j < selectedComps.length; j++) {
+                        setLayerVisibilityRecursive(selectedComps[j], languesDispos[0]); // Active la première langue pour test
+                    }
+                    
                     renderNextLanguage(comp, index + 1, compIndex);
                 }
 
